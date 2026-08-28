@@ -338,7 +338,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 1px s
 .scenario-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .scenario-card__title { display: flex; min-width: 0; align-items: center; gap: 9px; }
 .scenario-card__title > span { color: rgba(115, 201, 255, 0.36); font-family: "SF Mono", ui-monospace, monospace; font-size: 17px; font-weight: 500; }
-.scenario-card__title small { display: block; margin-bottom: 2px; color: var(--text-dim); font-size: 6px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.scenario-card__title small { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; color: var(--text-dim); font-size: 6px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.scenario-card__recommended { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 999px; background: rgba(74, 222, 128, 0.12); color: var(--green); font-size: 6px; font-style: normal; font-weight: 800; letter-spacing: 0.1em; }
 .scenario-card__title h4 { overflow: hidden; color: var(--text-primary); font-size: 11px; font-weight: 690; text-overflow: ellipsis; white-space: nowrap; }
 .scenario-deploy-button { display: inline-flex; min-height: 28px; flex: 0 0 auto; align-items: center; gap: 4px; padding: 0 9px; border: 1px solid rgba(115, 201, 255, 0.1); border-radius: 8px; font-size: 8px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; cursor: pointer; transition: transform 0.15s ease, filter 0.15s ease; }
 .scenario-deploy-button:hover { transform: translateY(-1px); filter: brightness(1.15); }

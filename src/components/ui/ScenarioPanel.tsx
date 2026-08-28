@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUpRight, Check, Save, Search, Trash2, Layers, Radar, Share2, Upload } from 'lucide-react'
+import { ArrowUpRight, Check, Save, Search, Trash2, Layers, Radar, Share2, Sparkles, Upload } from 'lucide-react'
 import { useScenarioStore } from '../../store/scenarioStore'
 import { useEntitySpawner } from '../../hooks/useEntitySpawner'
 import { useEntityStore } from '../../store/entityStore'
@@ -12,6 +12,8 @@ import type { Scenario } from '../../types/scenarios'
 interface ScenarioPanelProps {
   onScenarioLoaded?: () => void
 }
+
+const RECOMMENDED_SCENARIO_ID = 'drone-swarm'
 
 export function ScenarioPanel({ onScenarioLoaded }: ScenarioPanelProps) {
   const presets = useScenarioStore((s) => s.presets)
@@ -246,7 +248,12 @@ function ScenarioCard({ scenario, sequence, active = false, onLoad, onDelete, on
         <div className="scenario-card__title">
           <span>{sequence.toString().padStart(2, '0')}</span>
           <div>
-            <small>{threatLevel} threat</small>
+            <small>
+              {threatLevel} threat
+              {scenario.id === RECOMMENDED_SCENARIO_ID && (
+                <em className="scenario-card__recommended"><Sparkles size={9} /> Start here</em>
+              )}
+            </small>
             <h4>{scenario.name}</h4>
           </div>
         </div>

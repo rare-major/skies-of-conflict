@@ -1,7 +1,5 @@
-import { useState } from 'react'
 import { Compass, Layers, MousePointerClick, Rocket, Swords, X } from 'lucide-react'
-
-const STORAGE_KEY = 'skiesOfConflict.welcomeSeen'
+import { useUIStore } from '../../store/uiStore'
 
 const STEPS = [
   { icon: Layers, text: 'Open the Scenarios tab and Stage a mission from the library.' },
@@ -10,27 +8,11 @@ const STEPS = [
   { icon: Swords, text: 'Try War Game for a two-player hot-seat match once you know the ropes.' },
 ] as const
 
-function hasSeenWelcome() {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
 export function WelcomeTutorial() {
-  const [dismissed, setDismissed] = useState(hasSeenWelcome)
+  const visible = useUIStore((s) => s.welcomeVisible)
+  const dismiss = useUIStore((s) => s.dismissWelcome)
 
-  const dismiss = () => {
-    setDismissed(true)
-    try {
-      localStorage.setItem(STORAGE_KEY, '1')
-    } catch {
-      // ignore storage failures (private browsing, etc.)
-    }
-  }
-
-  if (dismissed) return null
+  if (!visible) return null
 
   return (
     <div className="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Settings, Crosshair, List, Layers, ChevronDown, ChevronUp, RadioTower, Swords, Satellite } from 'lucide-react'
+import { Settings, Crosshair, List, Layers, ChevronDown, ChevronUp, RadioTower, Swords, Satellite, HelpCircle } from 'lucide-react'
 import { SimControls } from './SimControls'
 import { SpawnPanel } from './SpawnPanel'
 import { EntityList } from './EntityList'
@@ -28,6 +28,7 @@ export function ControlPanel() {
   const [activeTab, setActiveTab] = useState<TabId>(hasEntities ? 'sim' : 'scenarios')
   const collapsed = useUIStore((s) => s.commandPanelCollapsed)
   const setCollapsed = useUIStore((s) => s.setCommandPanelCollapsed)
+  const openWelcome = useUIStore((s) => s.openWelcome)
   useEffect(() => {
     return useGameModeStore.subscribe((state, previous) => {
       if (state.phase === 'debrief' && previous.phase !== 'debrief') setActiveTab('game')
@@ -37,6 +38,19 @@ export function ControlPanel() {
   return (
     <div className="control-panel-shell animate-slideIn">
       <div className="flex items-center gap-1.5">
+        <button
+          onClick={openWelcome}
+          aria-label="Open welcome guide"
+          className="p-2 rounded-lg transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+          style={{
+            background: 'var(--bg-element)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-secondary)',
+          }}
+          title="Show welcome guide"
+        >
+          <HelpCircle size={14} />
+        </button>
         <ThemeToggle />
         <button
           onClick={() => setCollapsed(!collapsed)}
