@@ -37,9 +37,9 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
   elapsed: 0,
   showTrails: true,
   showRadar: true,
-  showCollisions: true,
-  showTerrain: false,
-  showDomeGrid: true,
+  showCollisions: false,
+  showTerrain: true,
+  showDomeGrid: false,
   initialSnapshot: null,
 
   start: () => set({ isRunning: true }),

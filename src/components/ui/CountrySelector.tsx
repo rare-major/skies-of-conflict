@@ -1,5 +1,5 @@
 import { Globe } from 'lucide-react'
-import { COUNTRIES } from '../../data/countries'
+import { COUNTRIES, type Country } from '../../data/countries'
 import { useCountryStore } from '../../store/countryStore'
 
 export function CountrySelector() {
@@ -7,18 +7,17 @@ export function CountrySelector() {
   const setCountry = useCountryStore((s) => s.setCountry)
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5">
+    <div className="country-selector">
+      <div className="section-heading">
         <Globe size={12} style={{ color: 'var(--text-muted)' }} />
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-          Country
-        </h3>
+        <div><span>Operational map</span><h3>Theatre</h3></div>
       </div>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="country-grid">
         <button
           onClick={() => setCountry(null)}
-          className="px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+          aria-pressed={selectedId === null}
+          className="country-button"
           style={{
             background: selectedId === null ? 'var(--bg-active)' : 'var(--bg-element)',
             color: selectedId === null ? 'var(--accent)' : 'var(--text-muted)',
@@ -33,27 +32,38 @@ export function CountrySelector() {
             <button
               key={c.id}
               onClick={() => setCountry(c.id)}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              aria-pressed={isActive}
+              className="country-button"
               style={{
                 background: isActive ? 'var(--bg-active)' : 'var(--bg-element)',
                 color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                 border: `1px solid ${isActive ? 'var(--border-active)' : 'var(--border)'}`,
               }}
             >
-              <span className="flex gap-px flex-shrink-0">
-                {c.flagColors.map((fc, i) => (
-                  <span
-                    key={i}
-                    className="w-1.5 h-3 first:rounded-l-sm last:rounded-r-sm"
-                    style={{ background: fc }}
-                  />
-                ))}
-              </span>
+              <CountryFlag country={c} />
               <span className="truncate">{c.name}</span>
             </button>
           )
         })}
       </div>
     </div>
+  )
+}
+
+function CountryFlag({ country }: { country: Country }) {
+  if (country.id === 'india') {
+    return (
+      <span className="country-flag country-flag--india" aria-hidden="true">
+        <span className="country-flag__chakra" />
+      </span>
+    )
+  }
+
+  return (
+    <span className="country-flag country-flag--columns" aria-hidden="true">
+      {country.flagColors.map((color, index) => (
+        <span key={index} style={{ background: color }} />
+      ))}
+    </span>
   )
 }

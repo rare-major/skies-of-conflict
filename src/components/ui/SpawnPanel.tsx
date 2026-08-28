@@ -1,11 +1,13 @@
-import { useState } from 'react'
-import { Crosshair, Shield, Plus } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Check, ChevronDown, Crosshair, Shield, Plus } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useEntitySpawner } from '../../hooks/useEntitySpawner'
 import { ATTACK_PRESETS } from '../../data/attackPresets'
 import { DEFENCE_PRESETS } from '../../data/defencePresets'
 import { ATTACK_TYPE_TIPS, DEFENCE_TYPE_TIPS, ATTACK_TRAJECTORY_TIPS, DEFENCE_TRAJECTORY_TIPS } from '../../data/tooltipDescriptions'
 import type { AttackType, AttackTrajectory, DefenceType, DefenceTrajectory } from '../../types/entities'
 import { IconButton } from './IconButton'
+import { useScenarioStore } from '../../store/scenarioStore'
 
 const ATTACK_TRAJECTORIES: { value: AttackTrajectory; label: string }[] = [
   { value: 'straight', label: 'Straight' },
@@ -29,10 +31,13 @@ const DEFENCE_TRAJECTORIES: { value: DefenceTrajectory; label: string }[] = [
 
 export function SpawnPanel() {
   const { spawnAttack, spawnDefence } = useEntitySpawner()
+  const setActiveScenario = useScenarioStore((s) => s.setActive)
   const [attackType, setAttackType] = useState<AttackType>(ATTACK_PRESETS[0].type)
   const [attackTraj, setAttackTraj] = useState<AttackTrajectory>(ATTACK_PRESETS[0].defaultTrajectory)
-  const [defenceType, setDefenceType] = useState<DefenceType>(DEFENCE_PRESETS[0].type)
+  const [defencePresetId, setDefencePresetId] = useState(DEFENCE_PRESETS[0].id)
   const [defenceTraj, setDefenceTraj] = useState<DefenceTrajectory>(DEFENCE_PRESETS[0].defaultTrajectory)
+  const defencePreset = DEFENCE_PRESETS.find((preset) => preset.id === defencePresetId) ?? DEFENCE_PRESETS[0]
+  const defenceType: DefenceType = defencePreset.type
 
   const handleAttackTypeChange = (type: AttackType) => {
     setAttackType(type)
@@ -40,9 +45,9 @@ export function SpawnPanel() {
     if (preset) setAttackTraj(preset.defaultTrajectory)
   }
 
-  const handleDefenceTypeChange = (type: DefenceType) => {
-    setDefenceType(type)
-    const preset = DEFENCE_PRESETS.find((p) => p.type === type)
+  const handleDefencePresetChange = (presetId: string) => {
+    setDefencePresetId(presetId)
+    const preset = DEFENCE_PRESETS.find((p) => p.id === presetId)
     if (preset) setDefenceTraj(preset.defaultTrajectory)
   }
 
@@ -66,7 +71,10 @@ export function SpawnPanel() {
         <IconButton
           icon={Plus}
           label="Spawn Attack"
-          onClick={() => spawnAttack(attackType, attackTraj)}
+          onClick={() => {
+            setActiveScenario(null)
+            spawnAttack(attackType, attackTraj)
+          }}
           variant="red"
           className="w-full"
         />
@@ -75,9 +83,9 @@ export function SpawnPanel() {
       <Section title="Defence" icon={Shield}>
         <Select
           label="Type"
-          value={defenceType}
-          options={DEFENCE_PRESETS.map((p) => ({ value: p.type, label: p.label }))}
-          onChange={(v) => handleDefenceTypeChange(v as DefenceType)}
+          value={defencePresetId}
+          options={DEFENCE_PRESETS.map((p) => ({ value: p.id, label: p.label }))}
+          onChange={handleDefencePresetChange}
         />
         <Hint text={DEFENCE_TYPE_TIPS[defenceType]} />
         <Select
@@ -90,7 +98,10 @@ export function SpawnPanel() {
         <IconButton
           icon={Plus}
           label="Spawn Defence"
-          onClick={() => spawnDefence(defenceType, defenceTraj)}
+          onClick={() => {
+            setActiveScenario(null)
+            spawnDefence(defenceType, defenceTraj, undefined, undefined, defencePresetId)
+          }}
           variant="green"
           className="w-full"
         />
@@ -99,38 +110,119 @@ export function SpawnPanel() {
   )
 }
 
-function Section({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <div className="space-y-2.5">
+    <section className="spawn-section space-y-3">
       <div className="flex items-center gap-1.5">
         <Icon size={12} style={{ color: 'var(--text-muted)' }} />
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{title}</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>{title}</h3>
       </div>
       {children}
-    </div>
+    </section>
   )
 }
 
 function Select({ label, value, options, onChange }: {
   label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void
 }) {
+  const [open, setOpen] = useState(false)
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value))
+  const [activeIndex, setActiveIndex] = useState(selectedIndex)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const id = useId()
+  const selected = options[selectedIndex]
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [])
+
+  const choose = (index: number) => {
+    const option = options[index]
+    if (!option) return
+    onChange(option.value)
+    setActiveIndex(index)
+    setOpen(false)
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Escape') {
+      setOpen(false)
+      return
+    }
+    if (event.key === 'Tab') {
+      setOpen(false)
+      return
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const direction = event.key === 'ArrowDown' ? 1 : -1
+      setOpen(true)
+      setActiveIndex((index) => ((open ? index : selectedIndex) + direction + options.length) % options.length)
+      return
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      setOpen(true)
+      setActiveIndex(event.key === 'Home' ? 0 : options.length - 1)
+      return
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      if (open) choose(activeIndex)
+      else {
+        setActiveIndex(selectedIndex)
+        setOpen(true)
+      }
+    }
+  }
+
   return (
-    <div>
-      <label className="label">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg px-3 py-2 text-xs outline-none cursor-pointer appearance-none transition-colors"
-        style={{
-          background: 'var(--bg-element)',
-          border: '1px solid var(--border)',
-          color: 'var(--text-primary)',
+    <div className="tactical-select" ref={rootRef}>
+      <span className="label" id={`${id}-label`}>{label}</span>
+      <button
+        type="button"
+        className={`tactical-select__trigger ${open ? 'is-open' : ''}`}
+        aria-labelledby={`${id}-label ${id}-value`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={`${id}-listbox`}
+        aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
+        onClick={() => {
+          setActiveIndex(selectedIndex)
+          setOpen((current) => !current)
         }}
+        onKeyDown={handleKeyDown}
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
+        <span id={`${id}-value`}>{selected?.label}</span>
+        <ChevronDown size={14} className={open ? 'rotate-180' : ''} />
+      </button>
+      {open && (
+        <div className="tactical-select__menu animate-fadeIn" id={`${id}-listbox`} role="listbox" aria-labelledby={`${id}-label`}>
+          {options.map((option, index) => {
+            const isSelected = option.value === value
+            const isActive = index === activeIndex
+            return (
+              <button
+                type="button"
+                id={`${id}-option-${index}`}
+                key={option.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`tactical-select__option ${isActive ? 'is-active' : ''} ${isSelected ? 'is-selected' : ''}`}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => choose(index)}
+              >
+                <span>{option.label}</span>
+                {isSelected && <Check size={13} />}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -138,7 +230,7 @@ function Select({ label, value, options, onChange }: {
 function Hint({ text }: { text?: string }) {
   if (!text) return null
   return (
-    <p className="text-[9px] leading-relaxed -mt-1 px-1" style={{ color: 'var(--text-dim)' }}>
+    <p className="text-[10px] leading-relaxed -mt-1 px-1" style={{ color: 'var(--text-muted)' }}>
       {text}
     </p>
   )

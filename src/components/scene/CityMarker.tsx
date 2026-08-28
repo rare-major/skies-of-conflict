@@ -164,7 +164,7 @@ export function CityMarker({ city, accentColor, palette }: Props) {
             letterSpacing: city.isCapital ? '0.04em' : '0.01em',
           }}
         >
-          {city.isCapital && '★ '}{city.name}
+          {city.isCapital && 'CAPITAL · '}{city.name}
         </div>
       </Html>
     </group>

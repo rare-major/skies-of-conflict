@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SimEntity, InterceptorEntity, EntityStatus, DefenceEntity } from '../types/entities'
+import type { SimEntity, InterceptorEntity, EntityStatus, DefenceEntity, SubsystemState } from '../types/entities'
 import type { Vector3Tuple } from 'three'
 
 interface EntityStore {
@@ -33,6 +33,7 @@ interface EntityStore {
   startReload: (defenceId: string, time: number) => void
   finishReload: (defenceId: string) => void
   decrementPayload: (attackId: string, payloadIndex: number) => void
+  applyDamage: (id: string, amount: number, subsystem?: keyof SubsystemState) => void
 }
 
 export const useEntityStore = create<EntityStore>((set) => ({
@@ -156,6 +157,37 @@ export const useEntityStore = create<EntityStore>((set) => ({
         payloads[payloadIndex] = { ...payloads[payloadIndex], count: payloads[payloadIndex].count - 1 }
       }
       return { ...e, params: { ...e.params, payloads } } as SimEntity
+    }),
+  })),
+
+  applyDamage: (id, amount, subsystem) => set((state) => ({
+    entities: state.entities.map((entity) => {
+      if (entity.id !== id) return entity
+      const integrity = Math.max(0, (entity.integrity ?? 100) - Math.max(0, amount))
+      const currentSubsystems = entity.subsystems ?? { radar: 100, propulsion: 100, guidance: 100, weapons: 100, communications: 100 }
+      const subsystems = subsystem
+        ? { ...currentSubsystems, [subsystem]: Math.max(0, currentSubsystems[subsystem] - amount * 1.35) }
+        : currentSubsystems
+      const damageFactor = Math.max(0.18, integrity / 100)
+      const params = entity.kind === 'defence'
+        ? {
+            ...entity.params,
+            detectionRange: entity.params.detectionRange * Math.max(0.35, subsystems.radar / 100),
+            accuracy: Math.max(0.1, entity.params.accuracy * Math.max(0.4, subsystems.weapons / 100)),
+            reactionDelay: entity.params.reactionDelay / damageFactor,
+          }
+        : {
+            ...entity.params,
+            speed: entity.params.speed * Math.max(0.35, subsystems.propulsion / 100),
+            accuracy: Math.max(0.08, entity.params.accuracy * Math.max(0.3, subsystems.guidance / 100)),
+          }
+      return {
+        ...entity,
+        integrity,
+        subsystems,
+        params,
+        status: integrity <= 0 ? (entity.kind === 'attack' ? 'intercepted' : 'destroyed') : entity.status,
+      } as SimEntity
     }),
   })),
 }))

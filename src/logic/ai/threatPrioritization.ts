@@ -15,6 +15,11 @@ const W_DISTANCE = 1.0
 const W_SPEED = 0.5
 const W_TIME_TO_IMPACT = 2.0
 
+const HIGH_VALUE_TYPES = new Set([
+  'ballistic-missile', 'hypersonic-glide', 'fighter-jet', 'stealth-aircraft',
+  'bomber', 'ew-aircraft', 'f-35', 'f-22', 'su-30', 'su-57', 'rafale', 'j-35',
+])
+
 /**
  * Score threats for a defence unit.
  * Higher score = higher priority.
@@ -22,7 +27,8 @@ const W_TIME_TO_IMPACT = 2.0
 export function scoreThreat(
   defencePos: Vector3Tuple,
   protectedPos: Vector3Tuple,
-  attack: AttackEntity
+  attack: AttackEntity,
+  priority: 'time-to-impact' | 'high-value' | 'mass-threat' = 'time-to-impact',
 ): ThreatScore {
   const dist = distance(defencePos, attack.position)
   const speed = length(attack.velocity)
@@ -36,10 +42,13 @@ export function scoreThreat(
     ? Math.min(0.9, 0.3 + Math.max(0, -attack.params.stealthFactor))
     : Math.max(0, -attack.params.stealthFactor * 0.3)
 
-  const score =
+  let score =
     W_DISTANCE * (1 / Math.max(dist, 1)) * 1000 +
     W_SPEED * speed +
     W_TIME_TO_IMPACT * (1 / Math.max(timeToImpact, 0.1)) * 100
+
+  if (priority === 'high-value' && HIGH_VALUE_TYPES.has(attack.type)) score += 240
+  if (priority === 'mass-threat' && (attack.type === 'rocket' || attack.type.includes('drone') || attack.isDecoy)) score += 115
 
   return {
     entityId: attack.id,
@@ -57,9 +66,10 @@ export function scoreThreat(
 export function rankThreats(
   defencePos: Vector3Tuple,
   protectedPos: Vector3Tuple,
-  attacks: AttackEntity[]
+  attacks: AttackEntity[],
+  priority: 'time-to-impact' | 'high-value' | 'mass-threat' = 'time-to-impact',
 ): ThreatScore[] {
   return attacks
-    .map((a) => scoreThreat(defencePos, protectedPos, a))
+    .map((a) => scoreThreat(defencePos, protectedPos, a, priority))
     .sort((a, b) => b.score - a.score)
 }

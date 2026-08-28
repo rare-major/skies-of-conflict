@@ -11,8 +11,14 @@ interface ToggleSwitchProps {
 
 export function ToggleSwitch({ label, value, onChange, icon: Icon, tooltip }: ToggleSwitchProps) {
   const inner = (
-    <label className="flex items-center justify-between cursor-pointer py-1 w-full group">
-      <span className="flex items-center gap-2 text-[11px] font-medium transition-colors duration-200"
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={() => onChange(!value)}
+      className="flex items-center justify-between cursor-pointer py-1.5 w-full group rounded-lg focus-visible:outline-none"
+    >
+      <span className="flex items-center gap-2 text-[12px] font-medium transition-colors duration-200"
         style={{ color: value ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
         {Icon && (
           <span
@@ -28,8 +34,7 @@ export function ToggleSwitch({ label, value, onChange, icon: Icon, tooltip }: To
         {label}
       </span>
       <div
-        onClick={(e) => { e.preventDefault(); onChange(!value) }}
-        className="w-9 h-[20px] rounded-full transition-all duration-300 relative cursor-pointer flex-shrink-0"
+        className="w-9 h-[20px] rounded-full transition-all duration-300 relative flex-shrink-0"
         style={{
           background: value ? 'var(--accent-solid)' : 'var(--bg-element)',
           boxShadow: value ? '0 0 8px var(--accent-glow)' : 'inset 0 1px 2px rgba(0,0,0,0.1)',
@@ -44,9 +49,9 @@ export function ToggleSwitch({ label, value, onChange, icon: Icon, tooltip }: To
           }}
         />
       </div>
-    </label>
+    </button>
   )
 
-  if (tooltip) return <Tooltip content={tooltip} position="left">{inner}</Tooltip>
+  if (tooltip) return <Tooltip content={tooltip} position="left" className="flex w-full">{inner}</Tooltip>
   return inner
 }

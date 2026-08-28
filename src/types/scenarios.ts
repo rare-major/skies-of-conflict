@@ -1,4 +1,4 @@
-import type { AttackType, AttackTrajectory, DefenceType, DefenceTrajectory } from './entities'
+import type { AttackType, AttackTrajectory, DefenceType, DefenceTrajectory, EntityParams } from './entities'
 import type { Vector3Tuple } from 'three'
 
 export interface ScenarioAttackEntry {
@@ -10,6 +10,8 @@ export interface ScenarioAttackEntry {
   isDecoy?: boolean
   count?: number
   spacing?: number
+  launchDelay?: number
+  params?: Partial<EntityParams>
 }
 
 export interface ScenarioDefenceEntry {
@@ -17,12 +19,15 @@ export interface ScenarioDefenceEntry {
   trajectory: DefenceTrajectory
   position: Vector3Tuple
   facing?: Vector3Tuple
+  presetId?: string
+  params?: Partial<EntityParams>
 }
 
 export interface Scenario {
   id: string
   name: string
   description: string
+  simulationSeed?: number
   attacks: ScenarioAttackEntry[]
   defences: ScenarioDefenceEntry[]
 }

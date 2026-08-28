@@ -25,6 +25,14 @@ export type EntityStatus = 'active' | 'intercepted' | 'destroyed' | 'missed' | '
 
 export type GuidanceSystem = 'unguided' | 'radar' | 'infrared' | 'gps' | 'laser' | 'inertial' | 'command'
 
+export interface SubsystemState {
+  radar: number
+  propulsion: number
+  guidance: number
+  weapons: number
+  communications: number
+}
+
 export interface Payload {
   type: 'aa-missile' | 'ag-missile' | 'bomb'
   count: number
@@ -53,6 +61,13 @@ export interface EntityParams {
   reloadTime: number
   payloadCapacity: number
   payloads: Payload[]
+  /** Mission-specific integrated sensor coverage that cannot lose a valid in-range track. */
+  assuredDetection?: boolean
+  /** Mission-specific hit-to-kill capability that guarantees a kill inside the fuse radius. */
+  assuredKill?: boolean
+  /** Radius of a final, sealed inner-defence perimeter around the defended centroid. */
+  sealedZoneRadius?: number
+  threatPriority?: 'time-to-impact' | 'high-value' | 'mass-threat'
 }
 
 export interface AttackEntity {
@@ -67,12 +82,15 @@ export interface AttackEntity {
   targetId?: string
   trail: Vector3Tuple[]
   spawnTime: number
+  activationTime?: number
   isDecoy: boolean
   waypoints?: Vector3Tuple[]
   loiterCenter?: Vector3Tuple
   loiterRadius?: number
   diveTriggered?: boolean
   parentJetId?: string
+  integrity?: number
+  subsystems?: SubsystemState
 }
 
 export interface DefenceEntity {
@@ -95,6 +113,9 @@ export interface DefenceEntity {
   isReloading: boolean
   reloadStartTime: number
   facing: Vector3Tuple
+  presetId?: string
+  integrity?: number
+  subsystems?: SubsystemState
 }
 
 export type SimEntity = AttackEntity | DefenceEntity
@@ -111,6 +132,7 @@ export interface InterceptorEntity {
   turnRate: number
   accuracy: number
   killRadius: number
+  assuredKill?: boolean
   status: EntityStatus
   trail: Vector3Tuple[]
   spawnTime: number

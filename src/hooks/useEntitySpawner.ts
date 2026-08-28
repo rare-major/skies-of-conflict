@@ -1,11 +1,15 @@
 import { useCallback } from 'react'
 import { useEntityStore } from '../store/entityStore'
 import { useSimulationStore } from '../store/simulationStore'
+import { useCameraStore } from '../store/cameraStore'
 import { ATTACK_PRESETS } from '../data/attackPresets'
 import { DEFENCE_PRESETS } from '../data/defencePresets'
 import type { AttackEntity, DefenceEntity, AttackType, DefenceType, AttackTrajectory, DefenceTrajectory } from '../types/entities'
 import type { Vector3Tuple } from 'three'
 import type { Scenario } from '../types/scenarios'
+import type { EntityParams } from '../types/entities'
+import { setSimulationSeed } from '../logic/game/random'
+import { useOperationsStore } from '../store/operationsStore'
 
 const GRAVITY = 9.81
 
@@ -146,7 +150,9 @@ export function useEntitySpawner() {
     type: AttackType,
     trajectory: AttackTrajectory,
     position?: Vector3Tuple,
-    velocity?: Vector3Tuple
+    velocity?: Vector3Tuple,
+    params?: Partial<EntityParams>,
+    activationTime?: number,
   ) => {
     const preset = ATTACK_PRESETS.find((p) => p.type === type) || ATTACK_PRESETS[0]
     const pos = position || [-400, 50 + Math.random() * 60, (Math.random() - 0.5) * 200]
@@ -164,11 +170,14 @@ export function useEntitySpawner() {
       trajectory,
       position: pos as Vector3Tuple,
       velocity: vel as Vector3Tuple,
-      params: { ...preset.params, payloads: preset.params.payloads.map((p) => ({ ...p })) },
+      params: { ...preset.params, ...params, payloads: params?.payloads?.map((p) => ({ ...p })) ?? preset.params.payloads.map((p) => ({ ...p })) },
       status: 'active',
       trail: [],
       spawnTime: useSimulationStore.getState().elapsed,
+      activationTime,
       isDecoy: preset.isDecoy,
+      integrity: 100,
+      subsystems: { radar: 100, propulsion: 100, guidance: 100, weapons: 100, communications: 100 },
     }
     addEntity(entity)
     return entity.id
@@ -178,9 +187,13 @@ export function useEntitySpawner() {
     type: DefenceType,
     trajectory: DefenceTrajectory,
     position?: Vector3Tuple,
-    facing?: Vector3Tuple
+    facing?: Vector3Tuple,
+    presetId?: string,
+    params?: Partial<EntityParams>,
   ) => {
-    const preset = DEFENCE_PRESETS.find((p) => p.type === type) || DEFENCE_PRESETS[0]
+    const preset = DEFENCE_PRESETS.find((p) => p.id === presetId)
+      || DEFENCE_PRESETS.find((p) => p.type === type)
+      || DEFENCE_PRESETS[0]
     const pos = position || [50 + Math.random() * 100, 0, (Math.random() - 0.5) * 100]
 
     const entity: DefenceEntity = {
@@ -190,7 +203,7 @@ export function useEntitySpawner() {
       trajectory,
       position: pos as Vector3Tuple,
       velocity: [0, 0, 0],
-      params: { ...preset.params, payloads: [] },
+      params: { ...preset.params, ...params, payloads: [] },
       status: 'active',
       trail: [],
       spawnTime: useSimulationStore.getState().elapsed,
@@ -201,6 +214,9 @@ export function useEntitySpawner() {
       isReloading: false,
       reloadStartTime: 0,
       facing: facing || [-1, 0, 0],
+      presetId: preset.id,
+      integrity: 100,
+      subsystems: { radar: 100, propulsion: 100, guidance: 100, weapons: 100, communications: 100 },
     }
     addEntity(entity)
     return entity.id
@@ -208,7 +224,10 @@ export function useEntitySpawner() {
 
   const loadScenario = useCallback((scenario: Scenario) => {
     clearAll()
+    useOperationsStore.getState().clearSensorTracks()
+    useOperationsStore.getState().clearRadioMessages()
     useSimulationStore.getState().reset()
+    setSimulationSeed(scenario.simulationSeed ?? Date.now())
 
     const defCentroid = computeDefenceCentroid(scenario)
 
@@ -234,7 +253,7 @@ export function useEntitySpawner() {
           vel = aimVelocityAtTarget(pos, defCentroid, vel, atk.trajectory)
         }
 
-        spawnAttack(atk.type, atk.trajectory, pos, vel)
+        spawnAttack(atk.type, atk.trajectory, pos, vel, atk.params, atk.launchDelay)
       }
     }
 
@@ -245,10 +264,14 @@ export function useEntitySpawner() {
     for (let i = 0; i < scenario.defences.length; i++) {
       const def = scenario.defences[i]
       const facing = def.facing || autoFacings[i] || [-1, 0, 0]
-      spawnDefence(def.type, def.trajectory, def.position, facing)
+      spawnDefence(def.type, def.trajectory, def.position, facing, def.presetId, def.params)
     }
 
     captureInitialSnapshot()
+    useCameraStore.getState().setMode('cinematic')
+    const operations = useOperationsStore.getState()
+    if (operations.directorEnabled) operations.setBriefingVisible(true)
+    if (operations.radioChatter) operations.addRadioMessage({ time: 0, speaker: 'BATTLE MANAGER', message: `${scenario.name} loaded. Sensor network is initializing.`, tone: 'system' })
   }, [clearAll, spawnAttack, spawnDefence])
 
   return { spawnAttack, spawnDefence, loadScenario, clearAll }

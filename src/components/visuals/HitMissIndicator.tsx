@@ -18,7 +18,7 @@ export function HitMissIndicators() {
           <group key={exp.id} position={[exp.position[0], exp.position[1] + yOffset, exp.position[2]]}>
             <Html center distanceFactor={200} style={{ pointerEvents: 'none' }}>
               <span
-                className="text-[10px] font-bold tracking-wider font-mono"
+                className="rounded-md bg-slate-950/70 px-2 py-1 text-[11px] font-bold tracking-wider font-mono"
                 style={{
                   opacity,
                   color: exp.type === 'hit' ? '#ff5533' : exp.type === 'miss' ? '#6688aa' : '#ff8844',

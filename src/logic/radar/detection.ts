@@ -1,5 +1,5 @@
 import type { Vector3Tuple } from 'three'
-import { sub, normalize, dot, distance, length } from '../physics/kinematics'
+import { sub, normalize, dot, distance } from '../physics/kinematics'
 
 /**
  * Calculate detection probability.

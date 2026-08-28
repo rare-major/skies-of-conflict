@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import type { Vector3Tuple } from 'three'
 
@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function TrajectoryTrail({ points, color }: Props) {
-  const geometry = useMemo(() => {
+  const line = useMemo(() => {
     const geo = new THREE.BufferGeometry()
     const positions = new Float32Array(points.length * 3)
     const opacities = new Float32Array(points.length)
@@ -22,12 +22,14 @@ export function TrajectoryTrail({ points, color }: Props) {
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geo.setAttribute('opacity', new THREE.BufferAttribute(opacities, 1))
-    return geo
-  }, [points])
+    const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 })
+    return new THREE.Line(geo, material)
+  }, [points, color])
 
-  return (
-    <line geometry={geometry}>
-      <lineBasicMaterial color={color} transparent opacity={0.55} linewidth={1} />
-    </line>
-  )
+  useEffect(() => () => {
+    line.geometry.dispose()
+    ;(line.material as THREE.Material).dispose()
+  }, [line])
+
+  return <primitive object={line} />
 }

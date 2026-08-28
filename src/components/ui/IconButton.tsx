@@ -10,6 +10,7 @@ interface IconButtonProps {
   size?: number
   className?: string
   tooltip?: string
+  disabled?: boolean
 }
 
 const VARIANTS = {
@@ -39,7 +40,7 @@ const VARIANTS = {
   },
 }
 
-export function IconButton({ icon: Icon, label, onClick, variant = 'default', active, size = 14, className = '', tooltip }: IconButtonProps) {
+export function IconButton({ icon: Icon, label, onClick, variant = 'default', active, size = 14, className = '', tooltip, disabled = false }: IconButtonProps) {
   const v = active ? VARIANTS.accent : VARIANTS[variant]
   const isPrimary = variant === 'primary'
   const isRedGhost = variant === 'red'
@@ -47,8 +48,11 @@ export function IconButton({ icon: Icon, label, onClick, variant = 'default', ac
   const btn = (
     <button
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold
-        transition-all duration-200 active:scale-[0.95] cursor-pointer
+      disabled={disabled}
+      aria-label={label ?? tooltip}
+      title={!tooltip ? label : undefined}
+      className={`icon-button icon-button--${variant} inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold
+        transition-all duration-200 active:scale-[0.95] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100
         ${isPrimary ? 'py-2.5 px-4 hover:brightness-110 animate-cta-glow' : 'py-2 px-3 hover:scale-[1.02]'}
         ${className}`}
       style={{
@@ -71,6 +75,6 @@ export function IconButton({ icon: Icon, label, onClick, variant = 'default', ac
     </button>
   )
 
-  if (tooltip) return <Tooltip content={tooltip} position="bottom">{btn}</Tooltip>
+  if (tooltip) return <Tooltip content={tooltip} position="bottom" className={className}>{btn}</Tooltip>
   return btn
 }

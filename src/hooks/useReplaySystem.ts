@@ -29,6 +29,13 @@ export function useReplaySystem() {
 
     if (replay.currentFrameIndex >= replay.frames.length - 1) {
       replay.stopReplay()
+      const finalSnapshot = replay.preReplaySnapshot
+      if (finalSnapshot) {
+        useEntityStore.setState({
+          entities: JSON.parse(JSON.stringify(finalSnapshot.entities)),
+          interceptors: JSON.parse(JSON.stringify(finalSnapshot.interceptors)),
+        })
+      }
     }
   })
 }

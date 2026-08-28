@@ -1,5 +1,3 @@
-import type { Vector3Tuple } from 'three'
-
 export interface TrackingState {
   targetId: string
   consecutiveDetections: number

@@ -17,17 +17,20 @@ interface ScenarioStore {
   presets: Scenario[]
   saved: Scenario[]
   activeScenarioId: string | null
+  activeScenario: Scenario | null
 
   loadScenario: (id: string) => Scenario | undefined
   saveScenario: (scenario: Scenario) => void
   deleteSaved: (id: string) => void
   setActive: (id: string | null) => void
+  setActiveScenario: (scenario: Scenario | null) => void
 }
 
 export const useScenarioStore = create<ScenarioStore>((set, get) => ({
   presets: PRESET_SCENARIOS,
   saved: loadSaved(),
   activeScenarioId: null,
+  activeScenario: null,
 
   loadScenario: (id) => {
     const all = [...get().presets, ...get().saved]
@@ -51,5 +54,9 @@ export const useScenarioStore = create<ScenarioStore>((set, get) => ({
     })
   },
 
-  setActive: (id) => set({ activeScenarioId: id }),
+  setActive: (id) => set((state) => ({
+    activeScenarioId: id,
+    activeScenario: id ? [...state.presets, ...state.saved].find((scenario) => scenario.id === id) ?? null : null,
+  })),
+  setActiveScenario: (activeScenario) => set({ activeScenarioId: activeScenario?.id ?? null, activeScenario }),
 }))

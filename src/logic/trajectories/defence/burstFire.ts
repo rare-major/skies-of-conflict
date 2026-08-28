@@ -9,7 +9,7 @@ import { randomGaussian } from '../../physics/kinematics'
 export function updateBurstProjectile(
   position: Vector3Tuple,
   velocity: Vector3Tuple,
-  speed: number,
+  _speed: number,
   dt: number
 ): { position: Vector3Tuple; velocity: Vector3Tuple } {
   const pos = add(position, scale(velocity, dt))

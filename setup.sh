@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Air Warfare 3D Simulation — Setup Script
+# Skies of Conflict — Setup Script
 #
 # This script checks prerequisites, installs dependencies, and starts the dev server.
 # Works on macOS, Linux, and Windows (Git Bash / WSL).
@@ -41,7 +41,7 @@ detect_os() {
 
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}║     Air Warfare 3D Simulation — Setup           ║${NC}"
+echo -e "${BOLD}║          Skies of Conflict — Setup              ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -51,17 +51,20 @@ echo ""
 
 # ── Check Node.js ───────────────────────────────────────────────────────────
 
-REQUIRED_NODE_MAJOR=18
+NODE_REQUIREMENT="v20.19+ or v22.12+"
 
 check_node() {
   if command -v node &> /dev/null; then
     NODE_VERSION=$(node -v | sed 's/v//')
     NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
-    if [ "$NODE_MAJOR" -ge "$REQUIRED_NODE_MAJOR" ]; then
-      success "Node.js v${NODE_VERSION} found (>= v${REQUIRED_NODE_MAJOR} required)"
+    NODE_MINOR=$(echo "$NODE_VERSION" | cut -d. -f2)
+    if { [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -ge 19 ]; } \
+      || { [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -ge 12 ]; } \
+      || [ "$NODE_MAJOR" -gt 22 ]; then
+      success "Node.js v${NODE_VERSION} found (${NODE_REQUIREMENT} required)"
       return 0
     else
-      warn "Node.js v${NODE_VERSION} found, but v${REQUIRED_NODE_MAJOR}+ is required"
+      warn "Node.js v${NODE_VERSION} found, but ${NODE_REQUIREMENT} is required"
       return 1
     fi
   else
@@ -80,8 +83,8 @@ install_node() {
       brew install node
     elif command -v nvm &> /dev/null; then
       info "Installing Node.js via nvm..."
-      nvm install 20
-      nvm use 20
+      nvm install 22
+      nvm use 22
     else
       fail "Neither Homebrew nor nvm found."
       echo ""
@@ -94,7 +97,7 @@ install_node() {
   elif [ "$OS" = "linux" ]; then
     if command -v apt-get &> /dev/null; then
       info "Installing Node.js via apt (NodeSource)..."
-      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+      curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
       sudo apt-get install -y nodejs
     elif command -v dnf &> /dev/null; then
       info "Installing Node.js via dnf..."
@@ -104,8 +107,8 @@ install_node() {
       sudo pacman -S --noconfirm nodejs npm
     elif command -v nvm &> /dev/null; then
       info "Installing Node.js via nvm..."
-      nvm install 20
-      nvm use 20
+      nvm install 22
+      nvm use 22
     else
       fail "Could not detect package manager (apt, dnf, pacman, nvm)."
       echo ""
@@ -127,7 +130,7 @@ install_node() {
     fi
 
   else
-    fail "Unsupported OS. Install Node.js v${REQUIRED_NODE_MAJOR}+ manually: https://nodejs.org"
+    fail "Unsupported OS. Install Node.js ${NODE_REQUIREMENT} manually: https://nodejs.org"
     exit 1
   fi
 
@@ -182,11 +185,12 @@ fi
 # ── Verify build ───────────────────────────────────────────────────────────
 
 echo ""
-info "Running TypeScript check..."
-if npx tsc --noEmit 2>/dev/null; then
-  success "TypeScript compilation OK"
+info "Running production build..."
+if npm run build; then
+  success "Production build OK"
 else
-  warn "TypeScript errors found (the app may still run in dev mode)"
+  fail "Production build failed"
+  exit 1
 fi
 
 # ── Summary ────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import type { AttackType, EntityParams, AttackTrajectory } from '../types/entities'
 
-interface AttackPreset {
+export interface AttackPreset {
   label: string
   type: AttackType
   defaultTrajectory: AttackTrajectory

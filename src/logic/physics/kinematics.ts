@@ -1,4 +1,5 @@
 import type { Vector3Tuple } from 'three'
+import { simulationRandom } from '../game/random'
 
 export const GRAVITY = 9.81
 
@@ -72,7 +73,7 @@ export function steerToward(
 
 export function randomGaussian(): number {
   let u = 0, v = 0
-  while (u === 0) u = Math.random()
-  while (v === 0) v = Math.random()
+  while (u === 0) u = simulationRandom()
+  while (v === 0) v = simulationRandom()
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)
 }

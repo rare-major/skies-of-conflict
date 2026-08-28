@@ -1,8 +1,10 @@
-import { Gauge, Target, Eye, Crosshair, Zap, Route } from 'lucide-react'
+import { Gauge, Eye, Crosshair, Route } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useEntityStore } from '../../store/entityStore'
 import { ATTACK_TRAJECTORY_TIPS, DEFENCE_TRAJECTORY_TIPS, PARAM_TIPS } from '../../data/tooltipDescriptions'
 import { Tooltip } from './Tooltip'
 import type { EntityParams, AttackTrajectory, DefenceTrajectory, SimEntity } from '../../types/entities'
+import { DEFENCE_PRESETS } from '../../data/defencePresets'
 
 const ATTACK_TRAJECTORIES: { value: AttackTrajectory; label: string }[] = [
   { value: 'straight', label: 'Straight' },
@@ -31,13 +33,16 @@ export function ParameterEditor() {
 
   if (!entity) {
     return (
-      <div className="text-[10px] text-center py-4" style={{ color: 'var(--text-dim)' }}>
+      <div className="text-[11px] text-center py-5" style={{ color: 'var(--text-muted)' }}>
         Select an entity to edit parameters
       </div>
     )
   }
 
   const params = entity.params
+  const entityLabel = entity.kind === 'defence'
+    ? DEFENCE_PRESETS.find((preset) => preset.id === entity.presetId)?.label ?? entity.type
+    : entity.type
   const trajTips = entity.kind === 'attack' ? ATTACK_TRAJECTORY_TIPS : DEFENCE_TRAJECTORY_TIPS
 
   const updateParam = (key: keyof EntityParams, value: number) => {
@@ -45,7 +50,7 @@ export function ParameterEditor() {
     const updated = store.entities.map((e) =>
       e.id === entity.id ? { ...e, params: { ...e.params, [key]: value } } : e
     )
-    store.setEntities(updated as any)
+    store.setEntities(updated as SimEntity[])
   }
 
   const updateTrajectory = (trajectory: string) => {
@@ -60,8 +65,8 @@ export function ParameterEditor() {
 
   return (
     <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-      <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-        Parameters — {entity.type}
+      <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
+        Parameters — {entityLabel}
       </h3>
 
       <Group label="Trajectory" icon={Route}>
@@ -93,7 +98,7 @@ export function ParameterEditor() {
   )
 }
 
-function Group({ label, icon: Icon, children }: { label: string; icon: any; children: React.ReactNode }) {
+function Group({ label, icon: Icon, children }: { label: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1">
@@ -119,7 +124,8 @@ function TrajectoryPicker({ options, value, onChange, tips }: {
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className="px-2 py-1 rounded-md text-[9px] font-medium transition-all duration-150 cursor-pointer hover:scale-[1.03] active:scale-[0.97]"
+            aria-pressed={isActive}
+            className="min-h-7 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all duration-150 cursor-pointer hover:scale-[1.03] active:scale-[0.97]"
             style={{
               background: isActive ? 'var(--bg-active)' : 'var(--bg-element)',
               color: isActive ? 'var(--accent)' : 'var(--text-muted)',
@@ -142,19 +148,20 @@ function Slider({ label, value, min, max, step, onChange, tip }: {
   label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; tip?: string
 }) {
   const labelEl = (
-    <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+    <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>{label}</span>
   )
 
   return (
     <div>
       <div className="flex justify-between mb-0.5">
         {tip ? <Tooltip content={tip}>{labelEl}</Tooltip> : labelEl}
-        <span className="text-[9px] font-mono" style={{ color: 'var(--text-secondary)' }}>
+        <span className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>
           {value.toFixed(step < 1 ? 2 : 0)}
         </span>
       </div>
       <input
         type="range"
+        aria-label={label}
         min={min}
         max={max}
         step={step}

@@ -1,9 +1,8 @@
 import type { Vector3Tuple } from 'three'
 import { add, sub, scale, normalize, length, distance } from '../../physics/kinematics'
-import type { AttackEntity } from '../../types/entities'
+import type { AttackEntity } from '../../../types/entities'
 
 const SEPARATION_RADIUS = 25
-const ALIGNMENT_RADIUS = 50
 const COHESION_RADIUS = 60
 const W_SEPARATION = 2.0
 const W_ALIGNMENT = 1.0

@@ -1,5 +1,5 @@
 import type { Vector3Tuple } from 'three'
-import { add, sub, scale, normalize, length, lerp } from '../../physics/kinematics'
+import { add, sub, scale, normalize, length } from '../../physics/kinematics'
 
 /**
  * Catmull-Rom spline interpolation for smooth waypoint following.

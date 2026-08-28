@@ -1,3 +1,4 @@
+import { Line } from '@react-three/drei'
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { useThemeStore } from '../../store/themeStore'
@@ -11,8 +12,8 @@ interface Props {
 
 /**
  * Tactical hemisphere wireframe grid providing altitude and bearing reference.
- * Built from custom line geometry: latitude rings, longitude meridians, and
- * a base circle. Uses additive blending in dark mode for natural glow.
+ * Uses screen-space line widths so the grid remains readable at every camera
+ * distance, with a restrained additive halo under a crisp tactical core.
  */
 export function DomeGrid({
   radius = 400,
@@ -23,106 +24,80 @@ export function DomeGrid({
   const theme = useThemeStore((s) => s.theme)
   const dark = theme === 'dark'
 
-  const { ringGeo, meridianGeo, baseGeo } = useMemo(() => {
-    const ringPositions: number[] = []
-    const meridianPositions: number[] = []
-    const basePositions: number[] = []
+  const { ringPaths, meridianPaths, basePath, axisPath } = useMemo(() => {
+    const rings: [number, number, number][][] = []
+    const meridians: [number, number, number][][] = []
 
     for (let r = 1; r <= latitudeRings; r++) {
       const phi = (r / (latitudeRings + 1)) * (Math.PI / 2)
       const ringRadius = radius * Math.cos(phi)
       const y = radius * Math.sin(phi)
+      const points: [number, number, number][] = []
 
-      for (let i = 0; i < segments; i++) {
-        const a0 = (i / segments) * Math.PI * 2
-        const a1 = ((i + 1) / segments) * Math.PI * 2
-        ringPositions.push(
-          Math.cos(a0) * ringRadius, y, Math.sin(a0) * ringRadius,
-          Math.cos(a1) * ringRadius, y, Math.sin(a1) * ringRadius,
-        )
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2
+        points.push([Math.cos(angle) * ringRadius, y, Math.sin(angle) * ringRadius])
       }
+      rings.push(points)
     }
 
     for (let m = 0; m < longitudeLines; m++) {
       const theta = (m / longitudeLines) * Math.PI * 2
       const cosT = Math.cos(theta)
       const sinT = Math.sin(theta)
-
       const arcSegments = 32
-      for (let i = 0; i < arcSegments; i++) {
-        const phi0 = (i / arcSegments) * (Math.PI / 2)
-        const phi1 = ((i + 1) / arcSegments) * (Math.PI / 2)
-
-        meridianPositions.push(
-          cosT * radius * Math.cos(phi0), radius * Math.sin(phi0), sinT * radius * Math.cos(phi0),
-          cosT * radius * Math.cos(phi1), radius * Math.sin(phi1), sinT * radius * Math.cos(phi1),
-        )
+      const points: [number, number, number][] = []
+      for (let i = 0; i <= arcSegments; i++) {
+        const phi = (i / arcSegments) * (Math.PI / 2)
+        points.push([
+          cosT * radius * Math.cos(phi),
+          radius * Math.sin(phi),
+          sinT * radius * Math.cos(phi),
+        ])
       }
+      meridians.push(points)
     }
 
-    for (let i = 0; i < segments; i++) {
-      const a0 = (i / segments) * Math.PI * 2
-      const a1 = ((i + 1) / segments) * Math.PI * 2
-      basePositions.push(
-        Math.cos(a0) * radius, 0, Math.sin(a0) * radius,
-        Math.cos(a1) * radius, 0, Math.sin(a1) * radius,
-      )
-    }
-
-    const toGeo = (arr: number[]) => {
-      const geo = new THREE.BufferGeometry()
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3))
-      return geo
+    const base: [number, number, number][] = []
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2
+      base.push([Math.cos(angle) * radius, 0.4, Math.sin(angle) * radius])
     }
 
     return {
-      ringGeo: toGeo(ringPositions),
-      meridianGeo: toGeo(meridianPositions),
-      baseGeo: toGeo(basePositions),
+      ringPaths: rings,
+      meridianPaths: meridians,
+      basePath: base,
+      axisPath: [[0, 0.4, 0], [0, radius, 0]] as [number, number, number][],
     }
   }, [radius, latitudeRings, longitudeLines, segments])
 
-  const ringColor = dark ? '#22d3ee' : '#0e7490'
-  const meridianColor = dark ? '#06b6d4' : '#155e75'
-  const baseColor = dark ? '#67e8f9' : '#0891b2'
+  const ringColor = dark ? '#20b8de' : '#087d9a'
+  const meridianColor = dark ? '#0f9fc5' : '#0e7490'
+  const baseColor = dark ? '#49c5e8' : '#036f8d'
 
-  const ringOpacity = dark ? 0.35 : 0.4
-  const meridianOpacity = dark ? 0.18 : 0.22
-  const baseOpacity = dark ? 0.5 : 0.55
-
-  const blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending
+  const glowBlending = dark ? THREE.AdditiveBlending : THREE.NormalBlending
 
   return (
-    <group renderOrder={1}>
-      <lineSegments geometry={ringGeo}>
-        <lineBasicMaterial
-          color={ringColor}
-          transparent
-          opacity={ringOpacity}
-          blending={blending}
-          depthWrite={false}
-        />
-      </lineSegments>
+    <group renderOrder={3}>
+      {ringPaths.map((points, index) => (
+        <group key={`ring-${index}`}>
+          <Line points={points} color={ringColor} lineWidth={3.4} transparent opacity={dark ? 0.04 : 0.025} blending={glowBlending} depthWrite={false} />
+          <Line points={points} color={ringColor} lineWidth={1.2} transparent opacity={dark ? 0.62 : 0.48} blending={THREE.NormalBlending} depthWrite={false} />
+        </group>
+      ))}
 
-      <lineSegments geometry={meridianGeo}>
-        <lineBasicMaterial
-          color={meridianColor}
-          transparent
-          opacity={meridianOpacity}
-          blending={blending}
-          depthWrite={false}
-        />
-      </lineSegments>
+      {meridianPaths.map((points, index) => (
+        <group key={`meridian-${index}`}>
+          <Line points={points} color={meridianColor} lineWidth={2.7} transparent opacity={dark ? 0.025 : 0.018} blending={glowBlending} depthWrite={false} />
+          <Line points={points} color={meridianColor} lineWidth={0.9} transparent opacity={dark ? 0.36 : 0.25} blending={THREE.NormalBlending} depthWrite={false} />
+        </group>
+      ))}
 
-      <lineSegments geometry={baseGeo}>
-        <lineBasicMaterial
-          color={baseColor}
-          transparent
-          opacity={baseOpacity}
-          blending={blending}
-          depthWrite={false}
-        />
-      </lineSegments>
+      <Line points={axisPath} color={baseColor} lineWidth={2.5} transparent opacity={dark ? 0.04 : 0.025} blending={glowBlending} depthWrite={false} />
+      <Line points={axisPath} color={baseColor} lineWidth={0.9} transparent opacity={dark ? 0.42 : 0.31} blending={THREE.NormalBlending} depthWrite={false} dashed dashSize={8} gapSize={7} />
+      <Line points={basePath} color={baseColor} lineWidth={4} transparent opacity={dark ? 0.05 : 0.03} blending={glowBlending} depthWrite={false} />
+      <Line points={basePath} color={baseColor} lineWidth={1.5} transparent opacity={dark ? 0.74 : 0.58} blending={THREE.NormalBlending} depthWrite={false} />
     </group>
   )
 }

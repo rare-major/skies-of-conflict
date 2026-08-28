@@ -1,7 +1,8 @@
-import { Plane, Radio, Crosshair, Shield, Bomb, Zap } from 'lucide-react'
+import { Plane, Radio, Crosshair, Shield, Bomb } from 'lucide-react'
 import { useEntityStore } from '../../store/entityStore'
 import { useCameraStore } from '../../store/cameraStore'
-import type { SimEntity, DefenceEntity } from '../../types/entities'
+import type { SimEntity, AttackEntity, DefenceEntity } from '../../types/entities'
+import { DEFENCE_PRESETS } from '../../data/defencePresets'
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'var(--green)',
@@ -21,6 +22,13 @@ function getEntityIcon(entity: SimEntity) {
   return Crosshair
 }
 
+function getEntityLabel(entity: SimEntity) {
+  if (entity.kind === 'defence') {
+    return DEFENCE_PRESETS.find((preset) => preset.id === entity.presetId)?.label ?? entity.type
+  }
+  return entity.type
+}
+
 export function EntityList() {
   const entities = useEntityStore((s) => s.entities)
   const selectedId = useEntityStore((s) => s.selectedEntityId)
@@ -38,7 +46,7 @@ export function EntityList() {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+      <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
         Active ({active.length})
       </h3>
 
@@ -53,7 +61,7 @@ export function EntityList() {
             <button
               key={entity.id}
               onClick={() => handleSelect(entity.id)}
-              className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-2 transition-all duration-150
+              className="w-full min-h-9 text-left px-3 py-2 rounded-xl text-[12px] font-medium flex items-center gap-2 transition-all duration-150
                 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
                 background: isSelected ? 'var(--bg-active)' : 'var(--bg-panel)',
@@ -63,16 +71,19 @@ export function EntityList() {
               <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: STATUS_COLORS[entity.status] }} />
               <Icon size={12} style={{ color: isDefence ? 'var(--green)' : 'var(--red)', opacity: 0.7, flexShrink: 0 }} />
               <span className="truncate" style={{ color: isDefence ? 'var(--green)' : 'var(--red)', opacity: 0.8 }}>
-                {entity.type}
+                {getEntityLabel(entity)}
               </span>
               {def && def.params.ammo < 999 && (
                 <span className="text-[9px] font-mono ml-auto flex-shrink-0" style={{ color: def.isReloading ? 'var(--orange)' : 'var(--text-dim)' }}>
                   {def.isReloading ? 'RLD' : `${def.params.ammo}/${def.params.maxAmmo}`}
                 </span>
               )}
+              {(entity.integrity ?? 100) < 100 && (
+                <span className="entity-integrity" data-critical={(entity.integrity ?? 100) < 35}>{Math.round(entity.integrity ?? 100)}%</span>
+              )}
               {!isDefence && (
                 <span className="text-[9px] ml-auto flex-shrink-0" style={{ color: 'var(--text-dim)' }}>
-                  {(entity as any).trajectory}
+                  {(entity as AttackEntity).trajectory}
                 </span>
               )}
             </button>
@@ -80,13 +91,13 @@ export function EntityList() {
         })}
 
         {active.length === 0 && (
-          <p className="text-[10px] text-center py-4" style={{ color: 'var(--text-dim)' }}>No active entities</p>
+          <p className="text-[11px] text-center py-5" style={{ color: 'var(--text-muted)' }}>No active units in the battlespace</p>
         )}
       </div>
 
       {inactive.length > 0 && (
         <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-          <h3 className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-dim)' }}>
+          <h3 className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
             Inactive ({inactive.length})
           </h3>
           <div className="space-y-0.5 max-h-24 overflow-y-auto">

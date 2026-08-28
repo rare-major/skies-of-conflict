@@ -2,12 +2,14 @@ import { useEffect, useRef } from 'react'
 import {
   Play, Pause, RotateCcw, Trash2, Crosshair, Shield, Target,
   Eye, Wifi, Mountain, Rewind, Move, Swords, UserCheck, Clapperboard, Atom, Globe,
-  Flame, ShieldCheck, CircleOff
+  Flame, ShieldCheck, CircleOff, Layers
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useSimulationStore } from '../../store/simulationStore'
 import { useEntityStore } from '../../store/entityStore'
 import { useCameraStore, type CameraMode } from '../../store/cameraStore'
 import { useReplayStore } from '../../store/replayStore'
+import { useUIStore } from '../../store/uiStore'
 import { BUTTON_TIPS, TOGGLE_TIPS, CAMERA_TIPS, TIMESCALE_TIPS } from '../../data/tooltipDescriptions'
 import { IconButton } from './IconButton'
 import { SegmentedControl } from './SegmentedControl'
@@ -16,7 +18,7 @@ import { ToggleSwitch } from './ToggleSwitch'
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-xl p-3.5 ${className}`}
+      className={`hud-card rounded-2xl p-4 ${className}`}
       style={{ background: 'var(--bg-element)', border: '1px solid var(--border)' }}
     >
       {children}
@@ -26,13 +28,17 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[8px] uppercase tracking-[0.12em] font-semibold mb-2 block" style={{ color: 'var(--text-dim)' }}>
+    <span className="section-label text-[9px] uppercase tracking-[0.14em] font-bold block" style={{ color: 'var(--text-muted)' }}>
       {children}
     </span>
   )
 }
 
-export function SimControls() {
+interface SimControlsProps {
+  onOpenScenarios?: () => void
+}
+
+export function SimControls({ onOpenScenarios }: SimControlsProps) {
   const isRunning = useSimulationStore((s) => s.isRunning)
   const timeScale = useSimulationStore((s) => s.timeScale)
   const elapsed = useSimulationStore((s) => s.elapsed)
@@ -50,6 +56,7 @@ export function SimControls() {
   const setShowTerrain = useSimulationStore((s) => s.setShowTerrain)
   const setShowDomeGrid = useSimulationStore((s) => s.setShowDomeGrid)
   const initialSnapshot = useSimulationStore((s) => s.initialSnapshot)
+  const collapseForEngagement = useUIStore((s) => s.collapseForEngagement)
 
   const cameraMode = useCameraStore((s) => s.mode)
   const setCameraMode = useCameraStore((s) => s.setMode)
@@ -62,7 +69,8 @@ export function SimControls() {
   const activeInterceptors = interceptors.filter((i) => i.status === 'active').length
   const attackHits = attacks.filter((e) => e.status === 'exploded').length
   const attackIntercepted = attacks.filter((e) => e.status === 'intercepted').length
-  const attackMissed = attacks.filter((e) => e.status === 'destroyed').length
+  const attackMissed = attacks.filter((e) => e.status === 'destroyed' || e.status === 'missed').length
+  const canRun = activeAttacks > 0
 
   const isRecording = useReplayStore((s) => s.isRecording)
   const isReplaying = useReplayStore((s) => s.isReplaying)
@@ -77,12 +85,12 @@ export function SimControls() {
 
   const wasRunning = useRef(isRunning)
   useEffect(() => {
-    if (wasRunning.current && !isRunning) {
+    if (wasRunning.current && !isRunning && activeAttacks === 0) {
       const replay = useReplayStore.getState()
       if (replay.isRecording) replay.stopRecording()
     }
     wasRunning.current = isRunning
-  }, [isRunning])
+  }, [activeAttacks, isRunning])
 
   const handleStartReplay = () => {
     const entityStore = useEntityStore.getState()
@@ -119,6 +127,7 @@ export function SimControls() {
   }
 
   const handleToggleRunning = () => {
+    const isStarting = !isRunning
     if (!isRunning && !initialSnapshot) {
       const snap = useEntityStore.getState()
       if (snap.entities.length > 0) {
@@ -129,11 +138,15 @@ export function SimControls() {
       }
     }
     toggleRunning()
+    if (isStarting) collapseForEngagement()
   }
 
   const handleReset = () => {
     simReset()
     useReplayStore.getState().clear()
+    const camera = useCameraStore.getState()
+    camera.setFollowEntity(null)
+    if (camera.mode === 'follow') camera.setMode('combat')
     const snap = useSimulationStore.getState().initialSnapshot
     if (snap) {
       useEntityStore.setState({
@@ -152,19 +165,33 @@ export function SimControls() {
     useEntityStore.getState().clearAll()
     useReplayStore.getState().clear()
     useSimulationStore.getState().setInitialSnapshot(null)
+    const camera = useCameraStore.getState()
+    camera.setFollowEntity(null)
+    camera.setMode('free')
   }
 
   const mins = Math.floor(elapsed / 60)
   const secs = elapsed % 60
 
   return (
-    <div className="space-y-4">
+    <div className="sim-controls">
+      {entities.length === 0 && (
+        <div className="empty-mission-card">
+          <span className="empty-mission-card__icon"><Layers size={18} /></span>
+          <div className="empty-mission-card__copy min-w-0 flex-1">
+            <h3>No forces deployed</h3>
+            <p>Choose a ready-made mission, then launch the engagement from here.</p>
+          </div>
+          <button type="button" onClick={onOpenScenarios}>Open missions</button>
+        </div>
+      )}
+
       {/* Timer + Stats */}
-      <Card>
-        <div className="flex items-center justify-between mb-3.5">
-          <div className="flex items-baseline gap-0.5">
+      <Card className="sim-overview-card">
+        <div className="simulation-clock-row">
+          <div className="simulation-clock flex items-baseline gap-0.5">
             <span
-              className={`text-2xl font-bold font-mono-timer ${isRunning ? 'animate-timer-pulse' : ''}`}
+              className={`text-[28px] font-bold font-mono-timer ${isRunning ? 'animate-timer-pulse' : ''}`}
               style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
             >
               {mins > 0 ? `${mins}:${secs.toFixed(1).padStart(4, '0')}` : secs.toFixed(1)}
@@ -173,35 +200,37 @@ export function SimControls() {
               {mins > 0 ? 'min' : 'sec'}
             </span>
           </div>
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{
-              background: isRunning ? 'var(--green)' : 'var(--text-dim)',
-              boxShadow: isRunning ? '0 0 6px var(--green)' : 'none',
-            }}
-          />
+          <div className="simulation-status flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: isRunning ? 'var(--green)' : 'var(--text-muted)' }}>
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: isRunning ? 'var(--green)' : 'var(--text-dim)',
+                boxShadow: isRunning ? '0 0 8px var(--green)' : 'none',
+              }}
+            />
+            {isRunning ? 'Live' : elapsed > 0 && !canRun ? 'Complete' : elapsed > 0 ? 'Paused' : 'Standby'}
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
-          <StatBadge icon={Crosshair} value={activeAttacks} label="Attacks" color="var(--red)" bg="rgba(248,113,113,0.1)" />
-          <StatBadge icon={Shield} value={activeDefences} label="Defence" color="var(--green)" bg="rgba(74,222,128,0.1)" />
-          <StatBadge icon={Target} value={activeInterceptors} label="Missiles" color="var(--accent)" bg="rgba(96,165,250,0.1)" />
-        </div>
-        <div className="grid grid-cols-3 gap-1.5 mt-1.5">
-          <StatBadge icon={Flame} value={attackHits} label="Hits" color="var(--orange)" bg="rgba(251,146,60,0.1)" />
-          <StatBadge icon={ShieldCheck} value={attackIntercepted} label="Shot Down" color="#22d3ee" bg="rgba(34,211,238,0.1)" />
-          <StatBadge icon={CircleOff} value={attackMissed} label="Missed" color="var(--text-dim)" bg="rgba(148,163,184,0.06)" />
+        <div className="engagement-stats-grid">
+          <StatBadge icon={Crosshair} value={activeAttacks} label="Inbound" color="var(--red)" bg="rgba(248,113,113,0.1)" />
+          <StatBadge icon={Shield} value={activeDefences} label="Defenders" color="var(--green)" bg="rgba(74,222,128,0.1)" />
+          <StatBadge icon={Target} value={activeInterceptors} label="In flight" color="var(--accent)" bg="rgba(96,165,250,0.1)" />
+          <StatBadge icon={Flame} value={attackHits} label="Impacts" color="var(--orange)" bg="rgba(251,146,60,0.1)" />
+          <StatBadge icon={ShieldCheck} value={attackIntercepted} label="Stopped" color="#22d3ee" bg="rgba(34,211,238,0.1)" />
+          <StatBadge icon={CircleOff} value={attackMissed} label="Escaped" color="var(--text-muted)" bg="rgba(148,163,184,0.06)" />
         </div>
       </Card>
 
       {/* Primary CTA + secondary actions */}
-      <div className="flex gap-2">
+      <div className="engagement-actions">
         <IconButton
           icon={isRunning ? Pause : Play}
-          label={isRunning ? 'Pause' : 'Start'}
+          label={isRunning ? 'Pause' : 'Engage'}
           onClick={handleToggleRunning}
           variant="primary"
           className="flex-[2]"
+          disabled={!isRunning && !canRun}
           tooltip={isRunning ? BUTTON_TIPS['Pause'] : BUTTON_TIPS['Start']}
         />
         <IconButton
@@ -210,6 +239,7 @@ export function SimControls() {
           onClick={handleReset}
           variant="default"
           className="flex-1"
+          disabled={entities.length === 0}
           tooltip={BUTTON_TIPS['Reset']}
         />
         <IconButton
@@ -219,6 +249,7 @@ export function SimControls() {
           className="flex-none w-10"
           tooltip={BUTTON_TIPS['Clear']}
           size={13}
+          disabled={entities.length === 0}
         />
       </div>
 
@@ -247,35 +278,35 @@ export function SimControls() {
         </button>
       )}
 
-      {/* Time Scale */}
-      <Card>
-        <SectionLabel>Time Scale</SectionLabel>
-        <SegmentedControl
-          options={[
-            { value: 0.5, label: '0.5×', tooltip: TIMESCALE_TIPS['0.5x'] },
-            { value: 1, label: '1×', tooltip: TIMESCALE_TIPS['1x'] },
-            { value: 2, label: '2×', tooltip: TIMESCALE_TIPS['2x'] },
-            { value: 5, label: '5×', tooltip: TIMESCALE_TIPS['5x'] },
-            { value: 10, label: '10×', tooltip: TIMESCALE_TIPS['10x'] },
-          ]}
-          value={timeScale}
-          onChange={setTimeScale}
-        />
-      </Card>
-
-      {/* Camera */}
-      <Card>
-        <SectionLabel>Camera Mode</SectionLabel>
-        <SegmentedControl
-          options={[
-            { value: 'free' as CameraMode, label: 'Free', icon: Move, tooltip: CAMERA_TIPS['free'] },
-            { value: 'combat' as CameraMode, label: 'Combat', icon: Swords, tooltip: CAMERA_TIPS['combat'] },
-            { value: 'follow' as CameraMode, label: 'Follow', icon: UserCheck, tooltip: CAMERA_TIPS['follow'] },
-            { value: 'cinematic' as CameraMode, label: 'Cine', icon: Clapperboard, tooltip: CAMERA_TIPS['cinematic'] },
-          ]}
-          value={cameraMode}
-          onChange={setCameraMode}
-        />
+      <Card className="control-stack-card">
+        <div className="control-stack-section">
+          <SectionLabel>Simulation speed</SectionLabel>
+          <SegmentedControl
+            options={[
+              { value: 0.5, label: '0.5×', tooltip: TIMESCALE_TIPS['0.5x'] },
+              { value: 1, label: '1×', tooltip: TIMESCALE_TIPS['1x'] },
+              { value: 2, label: '2×', tooltip: TIMESCALE_TIPS['2x'] },
+              { value: 5, label: '5×', tooltip: TIMESCALE_TIPS['5x'] },
+              { value: 10, label: '10×', tooltip: TIMESCALE_TIPS['10x'] },
+            ]}
+            value={timeScale}
+            onChange={setTimeScale}
+          />
+        </div>
+        <div className="control-stack-divider" />
+        <div className="control-stack-section">
+          <SectionLabel>Camera director</SectionLabel>
+          <SegmentedControl
+            options={[
+              { value: 'free' as CameraMode, label: 'Free', icon: Move, tooltip: CAMERA_TIPS['free'] },
+              { value: 'combat' as CameraMode, label: 'Combat', icon: Swords, tooltip: CAMERA_TIPS['combat'] },
+              { value: 'follow' as CameraMode, label: 'Follow', icon: UserCheck, tooltip: CAMERA_TIPS['follow'] },
+              { value: 'cinematic' as CameraMode, label: 'Cine', icon: Clapperboard, tooltip: CAMERA_TIPS['cinematic'] },
+            ]}
+            value={cameraMode}
+            onChange={setCameraMode}
+          />
+        </div>
       </Card>
 
       {/* Replay */}
@@ -309,22 +340,21 @@ export function SimControls() {
         </Card>
       )}
 
-      {/* Visualization toggles */}
-      <Card>
-        <SectionLabel>Visualization</SectionLabel>
-        <div className="space-y-0.5">
-          <ToggleSwitch label="Trails" value={showTrails} onChange={setShowTrails} icon={Eye} tooltip={TOGGLE_TIPS['Trails']} />
-          <ToggleSwitch label="Radar Cones" value={showRadar} onChange={setShowRadar} icon={Wifi} tooltip={TOGGLE_TIPS['Radar']} />
-          <ToggleSwitch label="Dome Grid" value={showDomeGrid} onChange={setShowDomeGrid} icon={Globe} tooltip={TOGGLE_TIPS['Dome Grid']} />
+      <Card className="display-controls-card">
+        <div>
+          <SectionLabel>Tactical overlays</SectionLabel>
+          <div className="space-y-0.5">
+            <ToggleSwitch label="Trails" value={showTrails} onChange={setShowTrails} icon={Eye} tooltip={TOGGLE_TIPS['Trails']} />
+            <ToggleSwitch label="Radar Cones" value={showRadar} onChange={setShowRadar} icon={Wifi} tooltip={TOGGLE_TIPS['Radar']} />
+            <ToggleSwitch label="Dome Grid" value={showDomeGrid} onChange={setShowDomeGrid} icon={Globe} tooltip={TOGGLE_TIPS['Dome Grid']} />
+          </div>
         </div>
-      </Card>
-
-      {/* Environment toggles */}
-      <Card>
-        <SectionLabel>Environment</SectionLabel>
-        <div className="space-y-0.5">
-          <ToggleSwitch label="Terrain" value={showTerrain} onChange={setShowTerrain} icon={Mountain} tooltip={TOGGLE_TIPS['Terrain']} />
-          <ToggleSwitch label="Collision Spheres" value={showCollisions} onChange={setShowCollisions} icon={Atom} tooltip={TOGGLE_TIPS['Collisions']} />
+        <div>
+          <SectionLabel>Environment</SectionLabel>
+          <div className="space-y-0.5">
+            <ToggleSwitch label="Terrain" value={showTerrain} onChange={setShowTerrain} icon={Mountain} tooltip={TOGGLE_TIPS['Terrain']} />
+            <ToggleSwitch label="Hit volumes" value={showCollisions} onChange={setShowCollisions} icon={Atom} tooltip={TOGGLE_TIPS['Collisions']} />
+          </div>
         </div>
       </Card>
     </div>
@@ -332,26 +362,22 @@ export function SimControls() {
 }
 
 function StatBadge({ icon: Icon, value, label, color, bg }: {
-  icon: any; value: number; label: string; color: string; bg: string
+  icon: LucideIcon; value: number; label: string; color: string; bg: string
 }) {
-  const prevValue = useRef(value)
-  const shouldPop = prevValue.current !== value
-  useEffect(() => { prevValue.current = value }, [value])
-
   return (
     <div
-      className="flex flex-col items-center gap-1.5 py-2.5 rounded-xl transition-all duration-200"
+      className="stat-badge flex flex-col items-center rounded-xl transition-all duration-200"
       style={{ background: bg, border: '1px solid var(--border)' }}
     >
       <Icon size={13} style={{ color, opacity: 0.7 }} />
       <span
         key={value}
-        className={`text-sm font-bold tabular-nums ${shouldPop ? 'animate-number-pop' : ''}`}
+        className="stat-badge__value text-base font-bold tabular-nums animate-number-pop"
         style={{ color }}
       >
         {value}
       </span>
-      <span className="text-[7px] uppercase tracking-[0.08em] font-semibold" style={{ color: 'var(--text-muted)' }}>
+      <span className="stat-badge__label text-[8px] uppercase tracking-[0.1em] font-bold" style={{ color: 'var(--text-muted)' }}>
         {label}
       </span>
     </div>

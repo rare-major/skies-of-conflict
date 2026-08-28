@@ -195,6 +195,124 @@ export const PRESET_SCENARIOS: Scenario[] = [
       { type: 'signal-jammer', trajectory: 'direct-intercept', position: [0, 0, 40] },
     ],
   },
+  {
+    id: 'operation-crossfire',
+    name: 'Operation Crossfire',
+    description: 'A deliberately balanced multi-axis raid collides with a layered but finite defence. Expect decoys, mass launches, confirmed kills, leakers and near-simultaneous impacts.',
+    simulationSeed: 82471,
+    attacks: [
+      // An electronic-attack orbit and a visible strike fighter pull the outer
+      // layer in different directions before the mass raid reaches the grid.
+      {
+        type: 'ew-aircraft', trajectory: 'loitering', position: [-430, 120, 0], velocity: [70, 0, 8], launchDelay: 0,
+        params: { jammingStrength: 0.72, stealthFactor: 0.12 },
+      },
+      {
+        type: 'fighter-jet', trajectory: 'zigzag', position: [-500, 125, -190], velocity: [175, 0, 34], launchDelay: 0.8,
+        params: { stealthFactor: 0.18, turnRate: 3.4 },
+      },
+
+      // Wave one: obvious radar returns and cheap ballistic threats create
+      // the first wall of launches and consume long-range attention.
+      ...Array.from({ length: 4 }, (_, i) => ({
+        type: 'decoy' as const,
+        trajectory: 'straight' as const,
+        position: [-440 - i * 9, 48 + i * 5, -180 + i * 120] as [number, number, number],
+        velocity: [92, 0, 12 - i * 8] as [number, number, number],
+        launchDelay: 0.35 + i * 0.22,
+      })),
+      ...Array.from({ length: 6 }, (_, i) => ({
+        type: 'rocket' as const,
+        trajectory: 'ballistic' as const,
+        position: [-405 - (i % 3) * 16, 18 + i * 2, -190 + i * 76] as [number, number, number],
+        velocity: [72 + (i % 2) * 4, 0, 6 - i * 2] as [number, number, number],
+        launchDelay: 1.2 + (i % 3) * 0.18,
+      })),
+
+      // Wave two arrives from north and south. The separated geometry makes
+      // the camera, trails and layered radar picture much more readable.
+      ...Array.from({ length: 5 }, (_, i) => ({
+        type: 'swarm-drone' as const,
+        trajectory: 'swarm' as const,
+        position: [-120 + i * 58, 58 + (i % 2) * 8, -430 - (i % 2) * 12] as [number, number, number],
+        velocity: [18 - i * 3, 0, 58] as [number, number, number],
+        launchDelay: 3 + i * 0.2,
+        params: { stealthFactor: 0.22 },
+      })),
+      ...Array.from({ length: 4 }, (_, i) => ({
+        type: 'cruise-missile' as const,
+        trajectory: 'cruise' as const,
+        position: [-150 + i * 96, 24 + i * 2, 490 + (i % 2) * 18] as [number, number, number],
+        velocity: [8 - i * 5, 0, -112] as [number, number, number],
+        launchDelay: 4.1 + i * 0.3,
+        params: { stealthFactor: 0.3, speed: 112 },
+      })),
+
+      // Strategic tracks force the outer layer to keep firing while three
+      // low-observable terminal attackers are positioned to create leakers.
+      {
+        type: 'ballistic-missile', trajectory: 'ballistic', position: [-430, 28, -245], velocity: [82, 0, 8], launchDelay: 6.2,
+        params: { stealthFactor: 0.06 },
+      },
+      {
+        type: 'ballistic-missile', trajectory: 'ballistic', position: [-445, 30, 245], velocity: [84, 0, -8], launchDelay: 6.55,
+        params: { stealthFactor: 0.08 },
+      },
+      ...Array.from({ length: 3 }, (_, i) => ({
+        type: 'kamikaze-drone' as const,
+        trajectory: 'dive' as const,
+        position: [205 + i * 12, 48 + i * 7, -82 + i * 82] as [number, number, number],
+        velocity: [-108, 0, 12 - i * 12] as [number, number, number],
+        launchDelay: 8.4 + i * 0.3,
+        params: {
+          speed: 112,
+          acceleration: 26,
+          stealthFactor: 0.8,
+          accuracy: 0.96,
+          guidanceSystem: 'gps' as const,
+        },
+      })),
+    ],
+    defences: [
+      {
+        type: 'long-range-sam', trajectory: 'predictive-intercept', position: [96, 0, -52], presetId: 'patriot',
+        params: { accuracy: 0.9, cooldown: 2.6, ammo: 10, maxAmmo: 10, reloadTime: 11, maxTrackedTargets: 6 },
+      },
+      {
+        type: 'long-range-sam', trajectory: 'proportional-nav', position: [96, 0, 52], presetId: 'patriot',
+        params: { accuracy: 0.88, cooldown: 2.8, ammo: 9, maxAmmo: 9, reloadTime: 11, maxTrackedTargets: 6 },
+      },
+      {
+        type: 'medium-range-sam', trajectory: 'proportional-nav', position: [18, 0, -82], presetId: 'buk',
+        params: { accuracy: 0.86, cooldown: 1.9, ammo: 8, maxAmmo: 8, maxTrackedTargets: 5 },
+      },
+      {
+        type: 'medium-range-sam', trajectory: 'radar-guided', position: [18, 0, 82], presetId: 'nasams',
+        params: { accuracy: 0.87, cooldown: 1.8, ammo: 8, maxAmmo: 8, maxTrackedTargets: 5 },
+      },
+      {
+        type: 'short-range-sam', trajectory: 'predictive-intercept', position: [-20, 0, -38], presetId: 'iron-dome',
+        params: { accuracy: 0.88, cooldown: 0.78, ammo: 16, maxAmmo: 16, reloadTime: 7 },
+      },
+      {
+        type: 'short-range-sam', trajectory: 'predictive-intercept', position: [-20, 0, 38], presetId: 'iron-dome',
+        params: { accuracy: 0.88, cooldown: 0.78, ammo: 16, maxAmmo: 16, reloadTime: 7 },
+      },
+      {
+        type: 'ciws', trajectory: 'burst-fire', position: [22, 0, 0], presetId: 'ciws',
+        params: { accuracy: 0.7, detectionRange: 75, maxRange: 48, cooldown: 0.28, maxTrackedTargets: 3 },
+      },
+      {
+        type: 'anti-drone-gun', trajectory: 'burst-fire', position: [-48, 0, -5], presetId: 'anti-drone-gun',
+        params: { accuracy: 0.72, detectionRange: 92, maxRange: 62, cooldown: 0.24, maxTrackedTargets: 3 },
+      },
+      {
+        type: 'aa-gun', trajectory: 'burst-fire', position: [-30, 0, 42], presetId: 'aa-gun',
+        params: { accuracy: 0.66, detectionRange: 82, maxRange: 56, cooldown: 0.2, maxTrackedTargets: 2 },
+      },
+      { type: 'signal-jammer', trajectory: 'direct-intercept', position: [34, 0, 34], presetId: 'signal-jammer' },
+    ],
+  },
 
   // ─── USA ──────────────────────────────────────────────────────────────
   {
@@ -280,8 +398,8 @@ export const PRESET_SCENARIOS: Scenario[] = [
   // ─── INDIA ────────────────────────────────────────────────────────────
   {
     id: 'india-delhi-dome',
-    name: 'Delhi Iron Dome',
-    description: 'Drone swarm and rockets target New Delhi. Iron Dome batteries and anti-drone guns defend.',
+    name: 'Delhi Integrated Air Shield',
+    description: 'A layered Indian air-defence network combines S-400, Barak-8, Akash-NG, QRSAM and counter-drone systems to protect New Delhi.',
     attacks: [
       ...Array.from({ length: 8 }, (_, i) => ({
         type: 'swarm-drone' as const,
@@ -294,12 +412,17 @@ export const PRESET_SCENARIOS: Scenario[] = [
       { type: 'rocket', trajectory: 'ballistic', position: [-340, 18, 0] as [number, number, number], velocity: [92, 48, 0] as [number, number, number] },
     ],
     defences: [
-      { type: 'short-range-sam', trajectory: 'predictive-intercept', position: [0, 0, -30] },
-      { type: 'short-range-sam', trajectory: 'predictive-intercept', position: [0, 0, 30] },
-      { type: 'short-range-sam', trajectory: 'proportional-nav', position: [30, 0, 0] },
-      { type: 'anti-drone-gun', trajectory: 'burst-fire', position: [-20, 0, -20] },
-      { type: 'anti-drone-gun', trajectory: 'direct-intercept', position: [-20, 0, 20] },
-      { type: 'ciws', trajectory: 'burst-fire', position: [10, 0, 0] },
+      { type: 'long-range-sam', trajectory: 'proportional-nav', position: [85, 0, -48], presetId: 'india-s-400' },
+      { type: 'long-range-sam', trajectory: 'proportional-nav', position: [85, 0, 48], presetId: 'india-s-400' },
+      { type: 'medium-range-sam', trajectory: 'radar-guided', position: [25, 0, -72], presetId: 'barak-8' },
+      { type: 'medium-range-sam', trajectory: 'radar-guided', position: [25, 0, 72], presetId: 'barak-8' },
+      { type: 'medium-range-sam', trajectory: 'proportional-nav', position: [-38, 0, -42], presetId: 'akash-ng' },
+      { type: 'medium-range-sam', trajectory: 'proportional-nav', position: [-38, 0, 42], presetId: 'akash-ng' },
+      { type: 'short-range-sam', trajectory: 'predictive-intercept', position: [-5, 0, -24], presetId: 'qrsam' },
+      { type: 'short-range-sam', trajectory: 'predictive-intercept', position: [-5, 0, 24], presetId: 'qrsam' },
+      { type: 'anti-drone-gun', trajectory: 'burst-fire', position: [-42, 0, -14], presetId: 'drdo-cuas' },
+      { type: 'anti-drone-gun', trajectory: 'burst-fire', position: [-42, 0, 14], presetId: 'drdo-cuas' },
+      { type: 'ciws', trajectory: 'burst-fire', position: [12, 0, 0], presetId: 'ak-630-india' },
     ],
   },
 

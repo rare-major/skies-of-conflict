@@ -1,8 +1,9 @@
 import type { DefenceEntity, AttackEntity, InterceptorEntity } from '../../types/entities'
 import type { Vector3Tuple } from 'three'
 import { distance } from '../physics/kinematics'
-import { rankThreats, type ThreatScore } from './threatPrioritization'
+import { rankThreats } from './threatPrioritization'
 import { getDetectionProbability } from '../radar/detection'
+import { simulationRandom } from '../game/random'
 
 export type DefenceZone = 'long' | 'medium' | 'short'
 
@@ -58,18 +59,19 @@ export function computeEngagements(
         if (engagedTargets.has(a.id)) return false
         const dist = distance(def.position, a.position)
         if (dist > def.params.maxRange) return false
+        if (def.params.assuredDetection) return true
         const pDetect = getDetectionProbability(
           def.position, facing, def.params.fovAngle,
           def.params.detectionRange, a.position,
           a.params.stealthFactor, jamming
         )
-        return Math.random() < pDetect
+        return simulationRandom() < pDetect
       })
 
       if (detectable.length === 0) continue
 
-      const threats = rankThreats(def.position, [0, 0, 0], detectable)
-      const viable = threats.filter((t) => Math.random() > t.isDecoyProbability)
+      const threats = rankThreats(def.position, [0, 0, 0], detectable, def.params.threatPriority)
+      const viable = threats.filter((t) => simulationRandom() > t.isDecoyProbability)
       if (viable.length === 0) continue
 
       const best = viable[0]

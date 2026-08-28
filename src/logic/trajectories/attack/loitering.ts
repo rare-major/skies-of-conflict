@@ -1,9 +1,9 @@
 import type { Vector3Tuple } from 'three'
-import { add, sub, scale, normalize, length } from '../../physics/kinematics'
+import { add, sub, scale, normalize } from '../../physics/kinematics'
 
 export function updateLoitering(
   position: Vector3Tuple,
-  velocity: Vector3Tuple,
+  _velocity: Vector3Tuple,
   speed: number,
   _acceleration: number,
   dt: number,

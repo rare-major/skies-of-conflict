@@ -32,7 +32,7 @@ export function DefenceMesh({ entity }: Props) {
   })
 
   return (
-    <group position={entity.position}>
+    <group position={entity.position} scale={1.25}>
       {/* Base platform */}
       <mesh position={[0, 1, 0]}>
         <cylinderGeometry args={[3, 4, 2, 8]} />

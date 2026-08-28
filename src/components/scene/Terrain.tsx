@@ -7,7 +7,7 @@ export function Terrain() {
   const theme = useThemeStore((s) => s.theme)
   const dark = theme === 'dark'
 
-  const { geometry, colorAttr } = useMemo(() => {
+  const geometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(1600, 1600, 128, 128)
     geo.rotateX(-Math.PI / 2)
 
@@ -62,16 +62,15 @@ export function Terrain() {
     geo.computeVertexNormals()
     const attr = new THREE.BufferAttribute(colors, 3)
     geo.setAttribute('color', attr)
-    return { geometry: geo, colorAttr: attr }
+    return geo
   }, [dark])
 
   return (
     <mesh geometry={geometry} receiveShadow castShadow>
       <meshStandardMaterial
         vertexColors
-        roughness={0.92}
+        roughness={0.9}
         metalness={0.0}
-        flatShading
       />
     </mesh>
   )

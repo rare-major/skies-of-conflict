@@ -17,7 +17,7 @@ interface SegmentedControlProps<T extends string | number> {
 export function SegmentedControl<T extends string | number>({ options, value, onChange }: SegmentedControlProps<T>) {
   return (
     <div
-      className="flex rounded-xl p-0.5 gap-0.5"
+      className="segmented-control flex rounded-xl"
       style={{ background: 'var(--bg-element)', border: '1px solid var(--border)' }}
     >
       {options.map((opt) => {
@@ -28,7 +28,8 @@ export function SegmentedControl<T extends string | number>({ options, value, on
           <button
             key={String(opt.value)}
             onClick={() => onChange(opt.value)}
-            className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-semibold
+            aria-pressed={isActive}
+            className={`segmented-control__button flex-1 flex items-center justify-center rounded-lg text-[10px] font-semibold
               transition-all duration-200 cursor-pointer
               ${isActive ? '' : 'hover:bg-[var(--bg-element-hover)]'}`}
             style={{
@@ -43,7 +44,7 @@ export function SegmentedControl<T extends string | number>({ options, value, on
         )
 
         if (opt.tooltip) {
-          return <Tooltip key={String(opt.value)} content={opt.tooltip} position="bottom">{btn}</Tooltip>
+          return <Tooltip key={String(opt.value)} content={opt.tooltip} position="bottom" className="flex-1">{btn}</Tooltip>
         }
         return btn
       })}

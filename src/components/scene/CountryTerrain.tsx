@@ -135,9 +135,8 @@ export function CountryTerrain({ params }: Props) {
       <mesh geometry={geometry} receiveShadow castShadow>
         <meshStandardMaterial
           vertexColors
-          roughness={0.88}
+          roughness={0.9}
           metalness={0.02}
-          flatShading
         />
       </mesh>
 

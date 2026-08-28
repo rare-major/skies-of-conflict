@@ -24,7 +24,7 @@ export function InterceptorMesh({ interceptor }: Props) {
   const isBurst = interceptor.trajectory === 'burst-fire'
 
   return (
-    <group position={interceptor.position} rotation={rotation}>
+    <group position={interceptor.position} rotation={rotation} scale={isBurst ? 1 : 1.35}>
       {isBurst ? (
         <mesh>
           <sphereGeometry args={[0.4, 4, 4]} />
