@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Radio, Sparkles } from 'lucide-react'
+import { Analytics } from '@vercel/analytics/react'
 import { Scene } from './components/scene/Scene'
 import { ControlPanel } from './components/ui/ControlPanel'
 import { MissionStatus } from './components/ui/MissionStatus'
@@ -81,6 +82,7 @@ export default function App() {
         <i />
         <span>{cameraMode} camera</span>
       </div>
+      <Analytics />
     </main>
   )
 }
